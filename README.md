@@ -1,7 +1,8 @@
-# IT401 Project Template
+# BetterBoxd
 
-A Flask project template with a clean separation of concerns: routes, services, and models
-are kept in their own files/directories so the codebase stays organized as it grows.
+A Flask movie and show recommendation prototype. BetterBoxd lets visitors explore a
+local JSON catalog, filter recommendations, rate titles, follow creators, and use a
+demo sign-in flow.
 
 ## Project Structure
 
@@ -18,7 +19,7 @@ project/
 ├── models/                  # Data models
 ├── templates/                # Jinja2 HTML templates
 ├── static/                   # CSS, JS, images
-├── data/                      # Local data files
+├── data/media.json            # Local movie and show catalog
 └── tests/                      # Test suite
 ```
 
@@ -65,6 +66,20 @@ python app.py
 The app will be available at [http://127.0.0.1:5000](http://127.0.0.1:5000).
 
 By default it runs in development mode. Set `FLASK_ENV=production` to use the production config.
+
+## App routes
+
+| Route | Purpose |
+|---|---|
+| `/` | BetterBoxd home page |
+| `/explore` | Search and filter the media catalog |
+| `/signin` | Local prototype sign-in page |
+| `/api/media` | JSON version of the filtered catalog |
+
+The Explore page and API accept `q`, `type`, `genre`, `rating`, and `year` query
+parameters. For example, `/api/media?type=Movie&genre=Science%20Fiction&rating=4.5`
+returns highly rated science-fiction movies. Ratings and followed creators are saved
+to browser `localStorage`, so they persist across page refreshes on that device.
 
 ## Configuration
 

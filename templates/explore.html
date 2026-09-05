@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Explore movies and shows — BetterBoxd{% endblock %}
+{% block body_class %}explore-page{% endblock %}
+
+{% block content %}
+<section class="explore-hero">
+    <div class="content-shell">
+        <p class="eyebrow light"><span></span>Go beyond the algorithm</p>
+        <h1>Find something<br><em>worth watching.</em></h1>
+        <p>Search across titles, talent, directors, genres, and topics. The filters below read directly from the BetterBoxd JSON catalog.</p>
+    </div>
+</section>
+
+<section class="catalog-section">
+    <div class="content-shell">
+        <form class="filter-panel" action="{{ url_for('explore') }}" method="get">
+            <label class="search-field">
+                <span>Search anything</span>
+                <span class="search-input-wrap">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
+                    <input type="search" name="q" value="{{ filters.query }}" placeholder="Title, actor, director, topic…">
+                </span>
+            </label>
+            <label>
+                <span>Format</span>
+                <select name="type">
+                    <option value="all">Movies + shows</option>
+                    <option value="Movie" {{ 'selected' if filters.media_type == 'Movie' }}>Movies</option>
+                    <option value="Show" {{ 'selected' if filters.media_type == 'Show' }}>Shows</option>
+                </select>
+            </label>
+            <label>
+                <span>Genre</span>
+                <select name="genre">
+                    <option value="all">All genres</option>
+                    {% for genre in genres %}
+                        <option value="{{ genre }}" {{ 'selected' if filters.genre == genre }}>{{ genre }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Minimum rating</span>
+                <select name="rating">
+                    <option value="0">Any rating</option>
+                    <option value="4" {{ 'selected' if filters.min_rating == '4' }}>4.0 and up</option>
+                    <option value="4.5" {{ 'selected' if filters.min_rating == '4.5' }}>4.5 and up</option>
+                </select>
+            </label>
+            <label>
+                <span>Release year</span>
+                <select name="year">
+                    <option value="all">Any year</option>
+                    {% for year in years %}
+                        <option value="{{ year }}" {{ 'selected' if filters.year == year|string }}>{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <button class="button button-primary filter-button" type="submit">Show my picks</button>
+        </form>
+
+        <div class="results-heading">
+            <div>
+                <p class="result-count">{{ titles | length }} {{ 'result' if titles | length == 1 else 'results' }}</p>
+                <h2>{% if filters.query %}Matches for “{{ filters.query }}”{% else %}Recommended for a better night{% endif %}</h2>
+            </div>
+            {% if filters.query or filters.media_type != 'all' or filters.genre != 'all' or filters.min_rating != '0' or filters.year != 'all' %}
+                <a class="clear-link" href="{{ url_for('explore') }}">Clear all filters ×</a>
+            {% endif %}
+        </div>
+
+        {% if titles %}
+            <div class="catalog-grid">
+                {% for item in titles %}
+                    <article class="catalog-card">
+                        <div class="catalog-art {{ item.art }}">
+                            <span class="match-badge">{{ item.match }}% match</span>
+                            <span class="catalog-letter" aria-hidden="true">{{ item.title[0] }}</span>
+                            <span class="catalog-format">{{ item.type }}</span>
+                        </div>
+                        <div class="catalog-copy">
+                            <div class="catalog-title-row">
+                                <div>
+                                    <p class="catalog-meta">{{ item.year }} · {{ item.runtime }}</p>
+                                    <h3>{{ item.title }}</h3>
+                                </div>
+                                <span class="catalog-rating">★ {{ item.rating }}</span>
+                            </div>
+                            <p class="catalog-synopsis">{{ item.synopsis }}</p>
+                            <div class="chip-row">
+                                {% for genre in item.genres %}<a href="{{ url_for('explore', genre=genre) }}">{{ genre }}</a>{% endfor %}
+                            </div>
+                            <div class="follow-row">
+                                <span>By {{ item.creator }}</span>
+                                <button class="follow-button" type="button" data-follow-key="creator:{{ item.creator }}" aria-pressed="false">+ Follow</button>
+                            </div>
+                            <details class="follow-more">
+                                <summary>Follow cast &amp; topics</summary>
+                                <div class="follow-options">
+                                    {% for person in item.talent %}
+                                        <button type="button" data-follow-key="actor:{{ person }}" data-followed-text="✓ {{ person }}" aria-pressed="false">+ {{ person }}</button>
+                                    {% endfor %}
+                                    {% for topic in item.topics %}
+                                        <button type="button" data-follow-key="topic:{{ topic }}" data-followed-text="✓ #{{ topic }}" aria-pressed="false">+ #{{ topic }}</button>
+                                    {% endfor %}
+                                </div>
+                            </details>
+                            <div class="your-rating" data-rating-key="{{ item.id }}">
+                                <span>Your rating</span>
+                                <div class="star-buttons" aria-label="Rate {{ item.title }} out of 5 stars">
+                                    {% for star in range(1, 6) %}
+                                        <button type="button" data-value="{{ star }}" aria-label="{{ star }} star{{ '' if star == 1 else 's' }}">★</button>
+                                    {% endfor %}
+                                </div>
+                                <output>Not rated</output>
+                            </div>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <span aria-hidden="true">⌁</span>
+                <h3>No titles found—yet.</h3>
+                <p>Try a broader search or remove one of your filters.</p>
+                <a class="button button-primary" href="{{ url_for('explore') }}">Reset filters</a>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

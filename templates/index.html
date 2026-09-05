@@ -1,11 +1,128 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>IT401 Project</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <h1>It works!</h1>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}BetterBoxd — Find what you actually want to watch{% endblock %}
+{% block body_class %}home-page{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-glow hero-glow-one"></div>
+    <div class="hero-glow hero-glow-two"></div>
+    <div class="content-shell hero-grid">
+        <div class="hero-copy">
+            <p class="eyebrow"><span></span>Your watchlist, reimagined</p>
+            <h1>Better picks.<br><em>Better nights.</em></h1>
+            <p class="tagline">we'll show you what you actually want to see</p>
+            <p class="hero-description">This application has been designed to help you navigate through all of the media that you have wanted to keep up with or with things you didn't even know was released. Share your voice with others and hear the voices of others in this community where we all help each other out.</p>
+            <div class="hero-actions">
+                <a class="button button-primary" href="{{ url_for('explore') }}">Start exploring <span aria-hidden="true">↗</span></a>
+                <a class="button button-ghost" href="{{ url_for('signin') }}">Sign in</a>
+            </div>
+            <div class="community-note">
+                <div class="avatar-stack" aria-hidden="true">
+                    <span>A</span><span>M</span><span>J</span><span>+</span>
+                </div>
+                <p><strong>One community.</strong><br>Thousands of great recommendations.</p>
+            </div>
+        </div>
+
+        <div class="hero-showcase" aria-label="Featured BetterBoxd recommendations">
+            <div class="orbit orbit-one"></div>
+            <div class="orbit orbit-two"></div>
+            {% for item in featured[:3] %}
+                <article class="floating-poster poster-{{ loop.index }} {{ item.art }}">
+                    <span class="poster-type">{{ item.type }}</span>
+                    <div class="poster-art-symbol" aria-hidden="true">{{ item.title[0] }}</div>
+                    <div class="poster-bottom">
+                        <p>{{ item.title }}</p>
+                        <span>★ {{ item.rating }}</span>
+                    </div>
+                </article>
+            {% endfor %}
+            <div class="match-pill"><strong>98%</strong><span>your match</span></div>
+            <div class="rating-pill"><span>★★★★★</span><strong>Your taste, heard.</strong></div>
+        </div>
+    </div>
+    <a class="scroll-cue" href="#featured" aria-label="Scroll to featured titles"><span></span>Discover</a>
+</section>
+
+<section class="marquee" aria-label="BetterBoxd features">
+    <div>
+        <span>RATE WHAT YOU WATCH</span><b>✦</b>
+        <span>FOLLOW WHAT YOU LOVE</span><b>✦</b>
+        <span>FIND YOUR NEXT FAVORITE</span><b>✦</b>
+        <span>RATE WHAT YOU WATCH</span><b>✦</b>
+        <span>FOLLOW WHAT YOU LOVE</span>
+    </div>
+</section>
+
+<section class="featured-section" id="featured">
+    <div class="content-shell">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow"><span></span>Picked for curious people</p>
+                <h2>Your next obsession<br>is in here somewhere.</h2>
+            </div>
+            <a class="text-link" href="{{ url_for('explore') }}">See the full catalog <span>→</span></a>
+        </div>
+
+        <div class="featured-grid">
+            {% for item in featured %}
+                <article class="media-tile">
+                    <a class="tile-art {{ item.art }}" href="{{ url_for('explore', q=item.title) }}" aria-label="View {{ item.title }} in Explore">
+                        <span class="match-badge">{{ item.match }}% match</span>
+                        <span class="tile-letter" aria-hidden="true">{{ item.title[0] }}</span>
+                        <span class="tile-type">{{ item.type }}</span>
+                    </a>
+                    <div class="tile-info">
+                        <div>
+                            <h3><a href="{{ url_for('explore', q=item.title) }}">{{ item.title }}</a></h3>
+                            <p>{{ item.year }} · {{ item.genres | join(' / ') }}</p>
+                        </div>
+                        <span class="catalog-rating">★ {{ item.rating }}</span>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section class="how-section">
+    <div class="content-shell how-grid">
+        <div class="how-intro">
+            <p class="eyebrow light"><span></span>Made around your taste</p>
+            <h2>Less scrolling.<br>More watching.</h2>
+            <p>BetterBoxd learns from the things you care about—not only broad genres. Follow the people, themes, and tiny details that make a story feel made for you.</p>
+            <a class="button button-light" href="{{ url_for('explore') }}">Find something good</a>
+        </div>
+        <ol class="feature-list">
+            <li>
+                <span class="feature-number">01</span>
+                <div><h3>Rate honestly</h3><p>Give movies and shows one to five stars and make your taste count.</p></div>
+                <span class="feature-icon" aria-hidden="true">★</span>
+            </li>
+            <li>
+                <span class="feature-number">02</span>
+                <div><h3>Follow the details</h3><p>Keep up with actors, directors, creators, and the topics you never get tired of.</p></div>
+                <span class="feature-icon" aria-hidden="true">◎</span>
+            </li>
+            <li>
+                <span class="feature-number">03</span>
+                <div><h3>Hear real voices</h3><p>Find recommendations shaped by a community of people who love stories too.</p></div>
+                <span class="feature-icon" aria-hidden="true">↗</span>
+            </li>
+        </ol>
+    </div>
+</section>
+
+<section class="final-cta">
+    <div class="content-shell cta-card">
+        <p class="eyebrow"><span></span>Your queue deserves better</p>
+        <h2>Ready to find your<br><em>new favorite?</em></h2>
+        <p>Explore the catalog, leave a rating, and teach BetterBoxd what “good” means to you.</p>
+        <div class="hero-actions">
+            <a class="button button-primary" href="{{ url_for('explore') }}">Explore recommendations</a>
+            <a class="button button-ghost dark" href="{{ url_for('signin') }}">Join the community</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

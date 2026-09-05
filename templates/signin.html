@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Sign in — BetterBoxd{% endblock %}
+{% block body_class %}signin-page{% endblock %}
+
+{% block content %}
+<section class="signin-shell">
+    <div class="signin-art art-violet">
+        <div class="signin-art-copy">
+            <span class="quote-mark">“</span>
+            <blockquote>My watchlist finally feels like it belongs to me.</blockquote>
+            <p>— A very satisfied movie night</p>
+        </div>
+        <div class="mini-review">
+            <span>COMMUNITY FAVORITE</span>
+            <strong>★★★★★</strong>
+            <p>4.8 average from people with excellent taste</p>
+        </div>
+    </div>
+
+    <div class="signin-panel">
+        <a class="back-link" href="{{ url_for('index') }}">← Back home</a>
+        <div class="signin-form-wrap">
+            <p class="eyebrow"><span></span>Good to see you again</p>
+            <h1>Sign in to<br><em>BetterBoxd.</em></h1>
+            <p class="signin-intro">Your ratings, follows, and a much better watchlist are waiting.</p>
+
+            <form class="signin-form" action="{{ url_for('signin') }}" method="post">
+                <label>
+                    <span>Email address</span>
+                    <input type="email" name="email" value="{{ email | default('') }}" autocomplete="email" placeholder="you@example.com" required>
+                </label>
+                <label>
+                    <span>Password</span>
+                    <span class="password-field">
+                        <input id="password" type="password" name="password" autocomplete="current-password" placeholder="Enter your password" required>
+                        <button type="button" class="password-toggle" aria-controls="password">Show</button>
+                    </span>
+                </label>
+                <div class="form-options">
+                    <label class="checkbox-label"><input type="checkbox" name="remember"> <span>Keep me signed in</span></label>
+                    <span class="prototype-label">Prototype account</span>
+                </div>
+                <button class="button button-primary signin-button" type="submit">Sign in <span>→</span></button>
+            </form>
+            <p class="privacy-note">Demo note: any valid email and non-empty password will sign you into this local prototype. Credentials are not stored.</p>
+            <p class="explore-instead">Just browsing? <a href="{{ url_for('explore') }}">Explore without an account</a></p>
+        </div>
+    </div>
+</section>
+{% endblock %}
