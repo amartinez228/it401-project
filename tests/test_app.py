@@ -11,6 +11,9 @@ def client():
         RAPIDAPI_KEY=None,
         RAPIDAPI_HOST=None,
         RAPIDAPI_BASE_URL=None,
+        IMDB_API_KEY=None,
+        IMDB_API_HOST=None,
+        IMDB_API_BASE_URL=None,
     )
     with app.test_client() as client:
         yield client
@@ -143,6 +146,77 @@ def test_explore_uses_streaming_api_for_title_search(client, monkeypatch):
         "country": "us",
         "show_type": "movie",
     }
+
+
+def test_imdb_api_requires_configuration(client):
+    response = client.get("/api/imdb/random")
+
+    assert response.status_code == 503
+    assert response.get_json()["error"] == "IMDb236 is not configured."
+
+
+def test_imdb_random_api_uses_shared_secret_server_side(client, monkeypatch):
+    client.application.config.update(
+        IMDB_API_KEY="private-test-key",
+        IMDB_API_HOST="imdb236.p.rapidapi.com",
+        IMDB_API_BASE_URL="https://imdb236.p.rapidapi.com",
+        IMDB_RANDOM_PATH="/api/imdb/random",
+    )
+    captured = {}
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return [{
+                "id": "tt-test",
+                "primaryTitle": "A Surprise Movie",
+                "type": "movie",
+            }]
+
+    def fake_get(url, headers, params, timeout):
+        captured.update(url=url, headers=headers, params=params, timeout=timeout)
+        return FakeResponse()
+
+    monkeypatch.setattr("services.api_service.requests.get", fake_get)
+
+    response = client.get("/api/imdb/random?type=Movie&genre=Science+Fiction")
+
+    assert response.status_code == 200
+    assert response.get_json()[0]["primaryTitle"] == "A Surprise Movie"
+    assert captured["url"] == "https://imdb236.p.rapidapi.com/api/imdb/random"
+    assert captured["params"] == {"type": "movie", "genre": "Sci-Fi"}
+    assert captured["headers"]["X-RapidAPI-Key"] == "private-test-key"
+    assert b"private-test-key" not in response.data
+
+
+def test_surprise_me_redirects_to_streaming_search(client, monkeypatch):
+    client.application.config.update(
+        IMDB_API_KEY="private-test-key",
+        IMDB_API_HOST="imdb236.p.rapidapi.com",
+        IMDB_API_BASE_URL="https://imdb236.p.rapidapi.com",
+        IMDB_RANDOM_PATH="/api/imdb/random",
+    )
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"primaryTitle": "A Surprise Movie"}
+
+    monkeypatch.setattr(
+        "services.api_service.requests.get",
+        lambda url, headers, params, timeout: FakeResponse(),
+    )
+
+    response = client.get("/explore?action=surprise&type=Movie")
+
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith(
+        "/explore?q=A+Surprise+Movie&type=Movie"
+    )
 
 
 def test_signin_and_signout(client):

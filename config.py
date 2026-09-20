@@ -18,6 +18,15 @@ class Config:
     RAPIDAPI_QUERY_PARAMETER = os.environ.get("RAPIDAPI_QUERY_PARAMETER", "title")
     RAPIDAPI_COUNTRY = os.environ.get("RAPIDAPI_COUNTRY", "us")
 
+    # IMDb236 uses the same RapidAPI app key with a different host.
+    IMDB_API_KEY = os.environ.get("IMDB_API_KEY") or RAPIDAPI_KEY
+    IMDB_API_HOST = os.environ.get("IMDB_API_HOST", "imdb236.p.rapidapi.com")
+    IMDB_API_BASE_URL = os.environ.get(
+        "IMDB_API_BASE_URL",
+        "https://imdb236.p.rapidapi.com",
+    )
+    IMDB_RANDOM_PATH = os.environ.get("IMDB_RANDOM_PATH", "/api/imdb/random")
+
     # Optional key reserved for a future AI integration.
     AI_SERVICE_API_KEY = os.environ.get("AI_SERVICE_API_KEY")
 

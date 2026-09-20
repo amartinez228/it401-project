@@ -1106,6 +1106,29 @@ button.nav-account {
     white-space: nowrap;
 }
 
+.filter-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.surprise-button {
+    background: var(--acid);
+    border: 0;
+    border-radius: 10px;
+    color: var(--ink);
+    font-size: 0.66rem;
+    font-weight: 900;
+    min-height: 36px;
+    padding: 0 17px;
+    white-space: nowrap;
+}
+
+.surprise-button:hover {
+    background: var(--ink);
+    color: var(--acid);
+}
+
 .results-heading {
     align-items: flex-end;
     display: flex;
@@ -1719,7 +1742,8 @@ button.nav-account {
         grid-template-columns: 2fr repeat(2, 1fr);
     }
 
-    .filter-button {
+    .filter-button,
+    .filter-actions {
         width: 100%;
     }
 
@@ -1969,7 +1993,8 @@ button.nav-account {
     }
 
     .search-field,
-    .filter-button {
+    .filter-button,
+    .filter-actions {
         grid-column: 1 / -1;
     }
 

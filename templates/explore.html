@@ -8,7 +8,7 @@
     <div class="content-shell">
         <p class="eyebrow light"><span></span>Go beyond the algorithm</p>
         <h1>Find something<br><em>worth watching.</em></h1>
-        <p>Search across titles, talent, directors, genres, and topics. The filters below read directly from the BetterBoxd JSON catalog.</p>
+        <p>Search live movie and streaming data, or let IMDb surprise you with something unexpected.</p>
     </div>
 </section>
 
@@ -56,7 +56,10 @@
                     {% endfor %}
                 </select>
             </label>
-            <button class="button button-primary filter-button" type="submit">Show my picks</button>
+            <div class="filter-actions">
+                <button class="button button-primary filter-button" type="submit">Show my picks</button>
+                <button class="surprise-button" type="submit" name="action" value="surprise">Surprise me ✦</button>
+            </div>
         </form>
 
         <div class="results-heading">

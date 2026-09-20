@@ -76,6 +76,7 @@ By default it runs in development mode. Set `FLASK_ENV=production` to use the pr
 | `/signin` | Local prototype sign-in page |
 | `/api/media` | JSON version of the filtered catalog |
 | `/api/rapid/search?q=arrival` | Server-side proxy to a configured RapidAPI search endpoint |
+| `/api/imdb/random?type=Movie&genre=Comedy` | Random IMDb236 recommendation |
 
 The Explore page accepts `q`, `type`, `genre`, `rating`, and `year` query
 parameters. With RapidAPI configured, a title query such as `q=Batman` searches
@@ -83,7 +84,8 @@ Streaming Availability and displays live posters, metadata, and US watch links.
 Without a title query (or without RapidAPI configured), Explore uses the local demo
 catalog. `/api/media` always exposes the local catalog as JSON. Ratings and followed
 creators are saved to browser `localStorage`, so they persist across page refreshes
-on that device.
+on that device. The **Surprise me** button uses IMDb236 to select a random title,
+then searches Streaming Availability for its full details and watch links.
 
 ## Configuration
 
@@ -107,6 +109,10 @@ contains only the *name* of the secret file so Git knows not to upload it.
 | `RAPIDAPI_SEARCH_PATH` | Title search endpoint, `/shows/search/title` |
 | `RAPIDAPI_QUERY_PARAMETER` | Title search parameter, `title` |
 | `RAPIDAPI_COUNTRY` | Two-letter country used for streaming availability, such as `us` |
+| `IMDB_API_KEY` | Optional separate IMDb236 key; defaults to `RAPIDAPI_KEY` |
+| `IMDB_API_HOST` | IMDb236 host, `imdb236.p.rapidapi.com` |
+| `IMDB_API_BASE_URL` | IMDb236 URL origin |
+| `IMDB_RANDOM_PATH` | Random-title endpoint, `/api/imdb/random` |
 | `AI_SERVICE_API_KEY` | Reserved for a future AI service |
 | `FLASK_ENV` | `development` or `production` |
 
@@ -132,6 +138,17 @@ private key must come from your RapidAPI account.
 The browser calls this project's Flask routes. Flask calls RapidAPI with the secret
 headers and converts the returned shows into BetterBoxd cards. This keeps the key
 out of the page source and browser developer tools.
+
+## Connecting IMDb236
+
+Subscribe to IMDb236 using the same RapidAPI app as Streaming Availability. The
+existing `RAPIDAPI_KEY` is reused automatically; the committed configuration
+contains only the non-secret IMDb236 host and random-title path. After subscribing,
+restart Flask and test:
+
+```bash
+curl "http://127.0.0.1:5000/api/imdb/random?type=Movie&genre=Comedy"
+```
 
 ## Testing
 

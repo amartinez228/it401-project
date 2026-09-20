@@ -12,6 +12,7 @@ from flask import (
 )
 
 from services.api_service import RapidApiService
+from services.imdb_service import ImdbService
 from services.search_service import SearchService
 from services.streaming_service import StreamingAvailabilityService
 
@@ -38,6 +39,23 @@ def register_routes(app):
             country=current_app.config["RAPIDAPI_COUNTRY"],
         )
 
+    def imdb_api_is_configured():
+        return all(
+            current_app.config.get(name)
+            for name in ("IMDB_API_KEY", "IMDB_API_HOST", "IMDB_API_BASE_URL")
+        )
+
+    def imdb_service():
+        api_client = RapidApiService(
+            base_url=current_app.config["IMDB_API_BASE_URL"],
+            api_key=current_app.config["IMDB_API_KEY"],
+            host=current_app.config["IMDB_API_HOST"],
+        )
+        return ImdbService(
+            api_client=api_client,
+            random_path=current_app.config["IMDB_RANDOM_PATH"],
+        )
+
     @app.route("/")
     def index():
         featured = media_catalog.search(min_rating=4.4, limit=4)
@@ -52,6 +70,35 @@ def register_routes(app):
             "min_rating": request.args.get("rating", "0"),
             "year": request.args.get("year", "all"),
         }
+
+        if request.args.get("action") == "surprise":
+            if not imdb_api_is_configured():
+                flash("The IMDb surprise service is not configured yet.", "error")
+                return redirect(url_for("explore"))
+            try:
+                surprise_title = imdb_service().random_title(
+                    media_type=filters["media_type"],
+                    genre=filters["genre"],
+                )
+            except requests.HTTPError as error:
+                current_app.logger.exception("IMDb random-title request failed")
+                if error.response is not None and error.response.status_code == 403:
+                    message = "Subscribe to the IMDb236 API in RapidAPI before using Surprise me."
+                else:
+                    message = "IMDb couldn't choose a title right now. Please try again."
+                flash(message, "error")
+                return redirect(url_for("explore"))
+            except (requests.RequestException, ValueError):
+                current_app.logger.exception("IMDb random-title request failed")
+                flash("IMDb couldn't choose a title right now. Please try again.", "error")
+                return redirect(url_for("explore"))
+
+            flash(f"Your IMDb surprise pick is {surprise_title}.", "success")
+            redirect_filters = {"q": surprise_title}
+            if filters["media_type"] != "all":
+                redirect_filters["type"] = filters["media_type"]
+            return redirect(url_for("explore", **redirect_filters))
+
         api_error = None
         using_external_api = bool(filters["query"] and rapid_api_is_configured())
 
@@ -169,5 +216,39 @@ def register_routes(app):
         except (requests.RequestException, ValueError):
             current_app.logger.exception("RapidAPI request failed")
             return jsonify({"error": "The external API request failed."}), 502
+
+        return jsonify(result)
+
+    @app.get("/api/imdb/random")
+    def imdb_random_api():
+        """Return a random IMDb title without exposing the RapidAPI key."""
+        required_settings = ("IMDB_API_KEY", "IMDB_API_HOST", "IMDB_API_BASE_URL")
+        missing = [name for name in required_settings if not current_app.config.get(name)]
+        if missing:
+            return jsonify({
+                "error": "IMDb236 is not configured.",
+                "missing": missing,
+            }), 503
+
+        try:
+            result = imdb_service().random(
+                media_type=request.args.get("type", "all"),
+                genre=request.args.get("genre", "all"),
+            )
+        except requests.Timeout:
+            return jsonify({"error": "The IMDb API timed out. Try again."}), 504
+        except requests.HTTPError as error:
+            current_app.logger.exception("IMDb API request failed")
+            upstream_status = error.response.status_code if error.response is not None else None
+            message = "The IMDb API rejected the request."
+            if upstream_status == 403:
+                message = "The RapidAPI app is not subscribed to IMDb236."
+            return jsonify({
+                "error": message,
+                "upstream_status": upstream_status,
+            }), 502
+        except (requests.RequestException, ValueError):
+            current_app.logger.exception("IMDb API request failed")
+            return jsonify({"error": "The IMDb API request failed."}), 502
 
         return jsonify(result)
