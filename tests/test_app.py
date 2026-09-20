@@ -6,7 +6,12 @@ from app import create_app
 @pytest.fixture
 def client():
     app = create_app("development")
-    app.config["TESTING"] = True
+    app.config.update(
+        TESTING=True,
+        RAPIDAPI_KEY=None,
+        RAPIDAPI_HOST=None,
+        RAPIDAPI_BASE_URL=None,
+    )
     with app.test_client() as client:
         yield client
 
@@ -53,6 +58,7 @@ def test_rapid_api_search_keeps_credentials_server_side(client, monkeypatch):
         RAPIDAPI_BASE_URL="https://movies.example.rapidapi.com",
         RAPIDAPI_SEARCH_PATH="/titles/search",
         RAPIDAPI_QUERY_PARAMETER="title",
+        RAPIDAPI_COUNTRY="us",
     )
     captured = {}
 
@@ -76,8 +82,67 @@ def test_rapid_api_search_keeps_credentials_server_side(client, monkeypatch):
     assert captured["url"] == "https://movies.example.rapidapi.com/titles/search"
     assert captured["headers"]["X-RapidAPI-Key"] == "private-test-key"
     assert captured["headers"]["X-RapidAPI-Host"] == "movies.example.rapidapi.com"
-    assert captured["params"] == {"title": "Arrival"}
+    assert captured["params"] == {"title": "Arrival", "country": "us"}
     assert b"private-test-key" not in response.data
+
+
+def test_explore_uses_streaming_api_for_title_search(client, monkeypatch):
+    client.application.config.update(
+        RAPIDAPI_KEY="private-test-key",
+        RAPIDAPI_HOST="streaming.example.rapidapi.com",
+        RAPIDAPI_BASE_URL="https://streaming.example.rapidapi.com",
+        RAPIDAPI_SEARCH_PATH="/shows/search/title",
+        RAPIDAPI_QUERY_PARAMETER="title",
+        RAPIDAPI_COUNTRY="us",
+    )
+    captured = {}
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return [{
+                "id": "movie/123",
+                "title": "Batman Begins",
+                "showType": "movie",
+                "releaseYear": 2005,
+                "runtime": 140,
+                "rating": 84,
+                "genres": [{"id": "action", "name": "Action"}],
+                "directors": ["Christopher Nolan"],
+                "cast": ["Christian Bale"],
+                "overview": "Bruce Wayne becomes Batman.",
+                "imageSet": {
+                    "verticalPoster": {"w480": "https://images.example/batman.jpg"},
+                },
+                "streamingOptions": {
+                    "us": [{
+                        "service": {"name": "Prime Video"},
+                        "type": "rent",
+                        "link": "https://watch.example/batman",
+                    }],
+                },
+            }]
+
+    def fake_get(url, headers, params, timeout):
+        captured.update(url=url, headers=headers, params=params, timeout=timeout)
+        return FakeResponse()
+
+    monkeypatch.setattr("services.api_service.requests.get", fake_get)
+
+    response = client.get("/explore?q=batman&type=Movie")
+
+    assert response.status_code == 200
+    assert b"Batman Begins" in response.data
+    assert b"Prime Video" in response.data
+    assert b"https://images.example/batman.jpg" in response.data
+    assert b"Live movie and streaming data" in response.data
+    assert captured["params"] == {
+        "title": "batman",
+        "country": "us",
+        "show_type": "movie",
+    }
 
 
 def test_signin_and_signout(client):

@@ -14,8 +14,9 @@ class Config:
     RAPIDAPI_KEY = os.environ.get("RAPIDAPI_KEY")
     RAPIDAPI_HOST = os.environ.get("RAPIDAPI_HOST")
     RAPIDAPI_BASE_URL = os.environ.get("RAPIDAPI_BASE_URL")
-    RAPIDAPI_SEARCH_PATH = os.environ.get("RAPIDAPI_SEARCH_PATH", "/search")
-    RAPIDAPI_QUERY_PARAMETER = os.environ.get("RAPIDAPI_QUERY_PARAMETER", "query")
+    RAPIDAPI_SEARCH_PATH = os.environ.get("RAPIDAPI_SEARCH_PATH", "/shows/search/title")
+    RAPIDAPI_QUERY_PARAMETER = os.environ.get("RAPIDAPI_QUERY_PARAMETER", "title")
+    RAPIDAPI_COUNTRY = os.environ.get("RAPIDAPI_COUNTRY", "us")
 
     # Optional key reserved for a future AI integration.
     AI_SERVICE_API_KEY = os.environ.get("AI_SERVICE_API_KEY")

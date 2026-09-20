@@ -1160,6 +1160,30 @@ button.nav-account {
     padding: 15px;
 }
 
+.catalog-poster {
+    background: var(--ink);
+}
+
+.catalog-poster > img {
+    height: 100%;
+    inset: 0;
+    object-fit: cover;
+    position: absolute;
+    width: 100%;
+}
+
+.catalog-poster::after {
+    background: linear-gradient(transparent 58%, rgba(23, 20, 28, 0.78));
+    content: "";
+    inset: 0;
+    position: absolute;
+}
+
+.catalog-poster .match-badge,
+.catalog-poster .catalog-format {
+    z-index: 2;
+}
+
 .catalog-letter {
     font-size: clamp(7rem, 13vw, 10rem);
 }
@@ -1207,6 +1231,63 @@ button.nav-account {
 
 .chip-row a:hover {
     background: var(--acid);
+}
+
+.result-source {
+    color: var(--muted);
+    font-size: 0.7rem;
+    margin: 8px 0 0;
+}
+
+.api-error {
+    align-items: flex-start;
+    background: #fff1ef;
+    border: 1px solid #e8aaa2;
+    border-radius: 14px;
+    color: #75271f;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 20px 22px;
+}
+
+.api-error span {
+    font-size: 0.78rem;
+}
+
+.watch-options {
+    border-top: 1px solid var(--line);
+    margin-top: 14px;
+    padding-top: 12px;
+}
+
+.watch-options > span {
+    display: block;
+    font-size: 0.58rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    margin-bottom: 7px;
+    text-transform: uppercase;
+}
+
+.watch-options > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.watch-options a {
+    background: rgba(117, 87, 255, 0.1);
+    border-radius: 999px;
+    color: var(--purple-dark);
+    font-size: 0.55rem;
+    font-weight: 800;
+    padding: 6px 8px;
+}
+
+.watch-options a:hover {
+    background: var(--purple);
+    color: white;
 }
 
 .follow-row {

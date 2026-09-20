@@ -63,19 +63,30 @@
             <div>
                 <p class="result-count">{{ titles | length }} {{ 'result' if titles | length == 1 else 'results' }}</p>
                 <h2>{% if filters.query %}Matches for “{{ filters.query }}”{% else %}Recommended for a better night{% endif %}</h2>
+                {% if using_external_api and not api_error %}
+                    <p class="result-source">Live movie and streaming data provided by Streaming Availability.</p>
+                {% endif %}
             </div>
             {% if filters.query or filters.media_type != 'all' or filters.genre != 'all' or filters.min_rating != '0' or filters.year != 'all' %}
                 <a class="clear-link" href="{{ url_for('explore') }}">Clear all filters ×</a>
             {% endif %}
         </div>
 
-        {% if titles %}
+        {% if api_error %}
+            <div class="api-error" role="alert">
+                <strong>We couldn't reach the movie catalog.</strong>
+                <span>{{ api_error }}</span>
+            </div>
+        {% elif titles %}
             <div class="catalog-grid">
                 {% for item in titles %}
                     <article class="catalog-card">
-                        <div class="catalog-art {{ item.art }}">
-                            <span class="match-badge">{{ item.match }}% match</span>
-                            <span class="catalog-letter" aria-hidden="true">{{ item.title[0] }}</span>
+                        <div class="catalog-art {{ item.art }} {{ 'catalog-poster' if item.poster_url }}">
+                            {% if item.poster_url %}
+                                <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" loading="lazy" referrerpolicy="no-referrer">
+                            {% endif %}
+                            <span class="match-badge">{{ item.match }}% {{ 'score' if item.source == 'rapidapi' else 'match' }}</span>
+                            {% if not item.poster_url %}<span class="catalog-letter" aria-hidden="true">{{ item.title[0] }}</span>{% endif %}
                             <span class="catalog-format">{{ item.type }}</span>
                         </div>
                         <div class="catalog-copy">
@@ -90,6 +101,18 @@
                             <div class="chip-row">
                                 {% for genre in item.genres %}<a href="{{ url_for('explore', genre=genre) }}">{{ genre }}</a>{% endfor %}
                             </div>
+                            {% if item.streaming_options %}
+                                <div class="watch-options">
+                                    <span>Where to watch in the US</span>
+                                    <div>
+                                        {% for option in item.streaming_options[:4] %}
+                                            <a href="{{ option.link }}" target="_blank" rel="noopener noreferrer">
+                                                {{ option.service }} · {{ option.type | title }}
+                                            </a>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
                             <div class="follow-row">
                                 <span>By {{ item.creator }}</span>
                                 <button class="follow-button" type="button" data-follow-key="creator:{{ item.creator }}" aria-pressed="false">+ Follow</button>

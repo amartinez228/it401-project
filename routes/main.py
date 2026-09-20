@@ -1,13 +1,42 @@
 import requests
 
-from flask import current_app, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import (
+    current_app,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
 from services.api_service import RapidApiService
 from services.search_service import SearchService
+from services.streaming_service import StreamingAvailabilityService
 
 
 def register_routes(app):
     media_catalog = SearchService(app.config["DATA_DIR"])
+
+    def rapid_api_is_configured():
+        return all(
+            current_app.config.get(name)
+            for name in ("RAPIDAPI_KEY", "RAPIDAPI_HOST", "RAPIDAPI_BASE_URL")
+        )
+
+    def streaming_service():
+        api_client = RapidApiService(
+            base_url=current_app.config["RAPIDAPI_BASE_URL"],
+            api_key=current_app.config["RAPIDAPI_KEY"],
+            host=current_app.config["RAPIDAPI_HOST"],
+        )
+        return StreamingAvailabilityService(
+            api_client=api_client,
+            search_path=current_app.config["RAPIDAPI_SEARCH_PATH"],
+            query_parameter=current_app.config["RAPIDAPI_QUERY_PARAMETER"],
+            country=current_app.config["RAPIDAPI_COUNTRY"],
+        )
 
     @app.route("/")
     def index():
@@ -23,13 +52,46 @@ def register_routes(app):
             "min_rating": request.args.get("rating", "0"),
             "year": request.args.get("year", "all"),
         }
-        titles = media_catalog.search(**filters)
+        api_error = None
+        using_external_api = bool(filters["query"] and rapid_api_is_configured())
+
+        if using_external_api:
+            try:
+                titles = streaming_service().search(
+                    filters["query"],
+                    media_type=filters["media_type"],
+                )
+                titles = StreamingAvailabilityService.apply_filters(
+                    titles,
+                    genre=filters["genre"],
+                    min_rating=filters["min_rating"],
+                    year=filters["year"],
+                )
+            except requests.Timeout:
+                titles = []
+                api_error = "The movie service timed out. Please try your search again."
+            except (requests.RequestException, ValueError):
+                current_app.logger.exception("Streaming Availability search failed")
+                titles = []
+                api_error = "Live movie search is temporarily unavailable. Please try again."
+        else:
+            titles = media_catalog.search(**filters)
+
+        genres = set(media_catalog.genres())
+        years = set(media_catalog.years())
+        for title in titles:
+            genres.update(title.get("genres", []))
+            if isinstance(title.get("year"), int):
+                years.add(title["year"])
+
         return render_template(
             "explore.html",
             titles=titles,
-            genres=media_catalog.genres(),
-            years=media_catalog.years(),
+            genres=sorted(genres),
+            years=sorted(years, reverse=True),
             filters=filters,
+            api_error=api_error,
+            using_external_api=using_external_api,
         )
 
     @app.route("/signin", methods=["GET", "POST"])
@@ -90,7 +152,15 @@ def register_routes(app):
             api_key=current_app.config["RAPIDAPI_KEY"],
             host=current_app.config["RAPIDAPI_HOST"],
         )
-        params = {current_app.config["RAPIDAPI_QUERY_PARAMETER"]: query}
+        params = {
+            current_app.config["RAPIDAPI_QUERY_PARAMETER"]: query,
+        }
+        if "country=" not in current_app.config["RAPIDAPI_SEARCH_PATH"]:
+            params["country"] = current_app.config["RAPIDAPI_COUNTRY"]
+        media_type = request.args.get("type", "all").lower()
+        show_type = {"movie": "movie", "show": "series"}.get(media_type)
+        if show_type:
+            params["show_type"] = show_type
 
         try:
             result = service.get(current_app.config["RAPIDAPI_SEARCH_PATH"], params=params)
