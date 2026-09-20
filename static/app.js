@@ -1,4 +1,30 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const scrollStorageKey = `betterboxd-scroll:${window.location.pathname}`;
+    const scrollPreservingForm = document.querySelector("[data-preserve-scroll]");
+
+    if (scrollPreservingForm) {
+        scrollPreservingForm.addEventListener("submit", () => {
+            try {
+                window.sessionStorage.setItem(scrollStorageKey, String(window.scrollY));
+            } catch (_error) {
+                // Search still works when browser storage is unavailable.
+            }
+        });
+
+        let savedScrollPosition = null;
+        try {
+            savedScrollPosition = window.sessionStorage.getItem(scrollStorageKey);
+            window.sessionStorage.removeItem(scrollStorageKey);
+        } catch (_error) {
+            // The browser will use its normal scroll behavior instead.
+        }
+        if (savedScrollPosition !== null) {
+            window.requestAnimationFrame(() => {
+                window.scrollTo({ top: Number(savedScrollPosition), behavior: "auto" });
+            });
+        }
+    }
+
     const storage = {
         read(key) {
             try {
