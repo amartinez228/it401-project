@@ -2062,3 +2062,9 @@ button.nav-account {
         transition-duration: 0.01ms !important;
     }
 }
+
+.box-office-table { overflow-x: auto; margin-top: 2rem; }
+.box-office-table table { width: 100%; border-collapse: collapse; text-align: left; }
+.box-office-table th, .box-office-table td { padding: 1rem; border-bottom: 1px solid #ddd; }
+.box-office-table caption { text-align: left; padding: 1rem 0; }
+.box-office-table a { text-decoration: underline; }

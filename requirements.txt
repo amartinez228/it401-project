@@ -1,4 +1,9 @@
 Flask>=3.0
 requests>=2.31
+beautifulsoup4>=4.12,<5
 python-dotenv>=1.0
 pytest>=8.0
+Flask-SQLAlchemy>=3.1,<4
+SQLAlchemy>=2.0.16,<3
+Flask-Migrate>=4,<5
+PyMySQL[rsa]>=1.1,<2

@@ -20,7 +20,12 @@ class ImdbService:
             params["type"] = api_type
         if genre.lower() != "all":
             params["genre"] = self.GENRE_MAP.get(genre, genre)
-        return self.api_client.get(self.random_path, params=params)
+        payload = self.api_client.get(self.random_path, params=params)
+        item = self._first_title(payload)
+        title = item.get("primaryTitle") or item.get("originalTitle") or item.get("title")
+        if not isinstance(title, str) or not title.strip():
+            raise ValueError("IMDb returned a response without a title.")
+        return [{"primaryTitle": title.strip()}]
 
     def random_title(self, media_type="all", genre="all"):
         payload = self.random(media_type=media_type, genre=genre)

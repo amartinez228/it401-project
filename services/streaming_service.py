@@ -1,3 +1,26 @@
+import math
+import hashlib
+from urllib.parse import urlsplit
+
+
+def safe_url(value):
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = urlsplit(value)
+        return value if parsed.scheme == "https" and parsed.hostname and not parsed.username and not parsed.password else None
+    except ValueError:
+        return None
+
+
+def strings(value):
+    return [item for item in value if isinstance(item, str)] if isinstance(value, list) else []
+
+
+def mapping(value):
+    return value if isinstance(value, dict) else {}
+
+
 class StreamingAvailabilityService:
     """Translate Streaming Availability responses into BetterBoxd media cards."""
 
@@ -29,23 +52,36 @@ class StreamingAvailabilityService:
             params["show_type"] = show_type
 
         results = self.api_client.get(self.search_path, params=params)
+        if isinstance(results, dict) and isinstance(results.get("results"), list):
+            results = results["results"]
         if not isinstance(results, list):
-            return []
-
-        return [self._normalize(show, index) for index, show in enumerate(results)]
+            raise ValueError("Unexpected movie response format.")
+        valid = [show for show in results if isinstance(show, dict) and isinstance(show.get("title") or show.get("originalTitle"), str)]
+        if results and not valid:
+            raise ValueError("No usable movie records were returned.")
+        return [self._normalize(show, index) for index, show in enumerate(valid)]
 
     def _normalize(self, show, index):
-        raw_rating = show.get("rating") or 0
+        try:
+            raw_rating = float(show.get("rating") or 0)
+            raw_rating = min(100, max(0, raw_rating)) if math.isfinite(raw_rating) else 0
+        except (TypeError, ValueError):
+            raw_rating = 0
         rating = round(raw_rating / 20, 1)
         show_type = show.get("showType", "movie")
         genres = [
             genre.get("name", "") if isinstance(genre, dict) else str(genre)
-            for genre in show.get("genres", [])
+            for genre in (show.get("genres") if isinstance(show.get("genres"), list) else [])
         ]
-        genres = [genre for genre in genres if genre]
-        creators = show.get("directors") or show.get("creators") or []
+        genres = [genre for genre in genres if isinstance(genre, str) and genre]
+        creators = strings(show.get("directors")) or strings(show.get("creators"))
         creator = ", ".join(creators[:2]) if creators else "Unknown creator"
-        year = show.get("releaseYear") or show.get("firstAirYear") or "Unknown"
+        year = show.get("releaseYear") or show.get("firstAirYear")
+        year = year if type(year) is int and 1800 <= year <= 9999 else "Unknown"
+        title = (show.get("title") or show.get("originalTitle") or "Untitled").strip()[:300] or "Untitled"
+        provider_id = show.get("id") or show.get("imdbId")
+        if not isinstance(provider_id, str) or not provider_id:
+            provider_id = "derived-" + hashlib.sha256(f"{title.casefold()}|{year}|{show_type}".encode()).hexdigest()
 
         if show_type == "movie" and show.get("runtime"):
             runtime = f"{show['runtime']} min"
@@ -55,8 +91,8 @@ class StreamingAvailabilityService:
         else:
             runtime = "Series"
 
-        image_set = show.get("imageSet") or {}
-        vertical_poster = image_set.get("verticalPoster") or {}
+        image_set = mapping(show.get("imageSet"))
+        vertical_poster = mapping(image_set.get("verticalPoster"))
         poster_url = next(
             (vertical_poster.get(size) for size in ("w480", "w360", "w600", "w240") if vertical_poster.get(size)),
             None,
@@ -64,13 +100,16 @@ class StreamingAvailabilityService:
 
         streaming_options = []
         seen_options = set()
-        for option in (show.get("streamingOptions") or {}).get(self.country, []):
-            service = option.get("service") or {}
+        options = mapping(show.get("streamingOptions")).get(self.country)
+        for option in options if isinstance(options, list) else []:
+            if not isinstance(option, dict):
+                continue
+            service = mapping(option.get("service"))
             service_name = service.get("name")
             option_type = option.get("type")
-            link = option.get("link")
+            link = safe_url(option.get("link"))
             identity = (service_name, option_type)
-            if not service_name or not link or identity in seen_options:
+            if not isinstance(service_name, str) or not isinstance(option_type, (str, type(None))) or not link or identity in seen_options:
                 continue
             seen_options.add(identity)
             streaming_options.append({
@@ -80,8 +119,8 @@ class StreamingAvailabilityService:
             })
 
         return {
-            "id": show.get("id") or show.get("imdbId") or f"api-{index}",
-            "title": show.get("title") or show.get("originalTitle") or "Untitled",
+            "id": provider_id,
+            "title": title,
             "year": year,
             "type": "Movie" if show_type == "movie" else "Show",
             "genres": genres,
@@ -89,11 +128,11 @@ class StreamingAvailabilityService:
             "match": int(raw_rating),
             "runtime": runtime,
             "creator": creator,
-            "talent": (show.get("cast") or [])[:4],
+            "talent": strings(show.get("cast"))[:4],
             "topics": genres[:3],
-            "synopsis": show.get("overview") or "No synopsis is available yet.",
+            "synopsis": show["overview"][:10000] if isinstance(show.get("overview"), str) else "No synopsis is available yet.",
             "art": self.ART_CLASSES[index % len(self.ART_CLASSES)],
-            "poster_url": poster_url,
+            "poster_url": safe_url(poster_url),
             "streaming_options": streaming_options,
             "source": "rapidapi",
         }

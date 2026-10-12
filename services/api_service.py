@@ -1,4 +1,5 @@
 import requests
+from urllib.parse import urlsplit
 
 
 class ApiService:
@@ -8,6 +9,9 @@ class ApiService:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.timeout = timeout
+        origin = urlsplit(self.base_url)
+        if origin.scheme != "https" or not origin.hostname or origin.username or origin.password or origin.query or origin.fragment:
+            raise ValueError("External APIs require an HTTPS origin without credentials.")
 
     def _headers(self):
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -21,7 +25,10 @@ class ApiService:
             headers=self._headers(),
             params=params,
             timeout=self.timeout,
+            allow_redirects=False,
         )
+        if 300 <= response.status_code < 400:
+            raise ValueError("API redirects are not accepted.")
         response.raise_for_status()
         return response.json()
 
@@ -31,7 +38,10 @@ class ApiService:
             headers=self._headers(),
             json=payload,
             timeout=self.timeout,
+            allow_redirects=False,
         )
+        if 300 <= response.status_code < 400:
+            raise ValueError("API redirects are not accepted.")
         response.raise_for_status()
         return response.json()
 

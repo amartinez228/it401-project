@@ -1,11 +1,12 @@
 import pytest
 
 from app import create_app
+from extensions import db
 
 
 @pytest.fixture
 def client():
-    app = create_app("development")
+    app = create_app("testing")
     app.config.update(
         TESTING=True,
         RAPIDAPI_KEY=None,
@@ -15,6 +16,8 @@ def client():
         IMDB_API_HOST=None,
         IMDB_API_BASE_URL=None,
     )
+    with app.app_context():
+        db.create_all()
     with app.test_client() as client:
         yield client
 
@@ -66,13 +69,14 @@ def test_rapid_api_search_keeps_credentials_server_side(client, monkeypatch):
     captured = {}
 
     class FakeResponse:
+        status_code = 200
         def raise_for_status(self):
             return None
 
         def json(self):
             return {"results": [{"title": "Arrival"}]}
 
-    def fake_get(url, headers, params, timeout):
+    def fake_get(url, headers, params, timeout, **kwargs):
         captured.update(url=url, headers=headers, params=params, timeout=timeout)
         return FakeResponse()
 
@@ -101,6 +105,7 @@ def test_explore_uses_streaming_api_for_title_search(client, monkeypatch):
     captured = {}
 
     class FakeResponse:
+        status_code = 200
         def raise_for_status(self):
             return None
 
@@ -128,7 +133,7 @@ def test_explore_uses_streaming_api_for_title_search(client, monkeypatch):
                 },
             }]
 
-    def fake_get(url, headers, params, timeout):
+    def fake_get(url, headers, params, timeout, **kwargs):
         captured.update(url=url, headers=headers, params=params, timeout=timeout)
         return FakeResponse()
 
@@ -165,6 +170,7 @@ def test_imdb_random_api_uses_shared_secret_server_side(client, monkeypatch):
     captured = {}
 
     class FakeResponse:
+        status_code = 200
         def raise_for_status(self):
             return None
 
@@ -175,7 +181,7 @@ def test_imdb_random_api_uses_shared_secret_server_side(client, monkeypatch):
                 "type": "movie",
             }]
 
-    def fake_get(url, headers, params, timeout):
+    def fake_get(url, headers, params, timeout, **kwargs):
         captured.update(url=url, headers=headers, params=params, timeout=timeout)
         return FakeResponse()
 
@@ -200,6 +206,7 @@ def test_surprise_me_redirects_to_streaming_search(client, monkeypatch):
     )
 
     class FakeResponse:
+        status_code = 200
         def raise_for_status(self):
             return None
 
@@ -208,7 +215,7 @@ def test_surprise_me_redirects_to_streaming_search(client, monkeypatch):
 
     monkeypatch.setattr(
         "services.api_service.requests.get",
-        lambda url, headers, params, timeout: FakeResponse(),
+        lambda url, headers, params, timeout, **kwargs: FakeResponse(),
     )
 
     response = client.get("/explore?action=surprise&type=Movie")

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Box office — BetterBoxd{% endblock %}
+{% block content %}
+<section class="explore-hero"><div class="content-shell">
+    <p class="eyebrow light">Discover a crowd favorite</p>
+    <h1>Box office<br><em>standouts.</em></h1>
+    <p>Explore worldwide theatrical earnings, then find where to watch.</p>
+</div></section>
+<section class="catalog-section"><div class="content-shell">
+    <form class="filter-panel" method="get">
+        <label class="search-field"><span>Filter movie titles</span><input type="search" name="q" value="{{ query }}" maxlength="200" placeholder="Search the box office list"></label>
+        <button class="button button-primary" type="submit">Find movies</button>
+    </form>
+    <p class="result-source">Source: <a href="{{ data.source_url }}" target="_blank" rel="noopener noreferrer">Wikipedia: List of highest-grossing films</a>. Earnings are nominal US dollars, not adjusted for inflation.</p>
+    {% if data.fetched_at %}<p>Retrieved {{ data.fetched_at }}. <a href="{{ '/api/box-office?q=' ~ (query|urlencode) }}">View structured JSON</a></p>{% endif %}
+    {% if error %}<div class="api-error" role="alert">{{ error }}</div>{% endif %}
+    {% if data.stale %}<div class="api-error" role="status">The source is unavailable. Showing the last successful retrieval from {{ data.fetched_at }}.</div>{% endif %}
+    {% if data.results %}
+    <div class="box-office-table"><table>
+        <caption>{{ data.count }} movies — select a title to search watch options</caption>
+        <thead><tr><th scope="col">Rank</th><th scope="col">Movie</th><th scope="col">Year</th><th scope="col">Worldwide gross</th></tr></thead>
+        <tbody>{% for film in data.results %}<tr>
+            <td>{{ film.rank if film.rank is not none else '—' }}</td>
+            <td><a href="{{ url_for('explore', q=film.title, type='Movie') }}">{{ film.title }}</a></td>
+            <td>{{ film.year if film.year is not none else 'Unknown' }}</td>
+            <td>{{ '${:,.0f}'.format(film.worldwide_gross_usd) if film.worldwide_gross_usd is not none else 'Unavailable' }}</td>
+        </tr>{% endfor %}</tbody>
+    </table></div>
+    {% elif not error %}<div class="empty-state"><h2>No matching movies</h2><p>Try another title.</p></div>{% endif %}
+</div></section>
+{% endblock %}

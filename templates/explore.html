@@ -19,7 +19,7 @@
                 <span>Search anything</span>
                 <span class="search-input-wrap">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
-                    <input type="search" name="q" value="{{ filters.query }}" placeholder="Title, actor, director, topic…">
+                    <input type="search" name="q" maxlength="200" value="{{ filters.query }}" placeholder="Title, actor, director, topic…">
                 </span>
             </label>
             <label>
@@ -67,7 +67,9 @@
                 <p class="result-count">{{ titles | length }} {{ 'result' if titles | length == 1 else 'results' }}</p>
                 <h2>{% if filters.query %}Matches for “{{ filters.query }}”{% else %}Recommended for a better night{% endif %}</h2>
                 {% if using_external_api and not api_error %}
-                    <p class="result-source">Live movie and streaming data provided by Streaming Availability.</p>
+                    <p class="result-source">Live movie and streaming data provided by Streaming Availability; saved results are reused when available.</p>
+                {% elif not using_external_api %}
+                    <p class="result-source">Showing the local demo catalog.</p>
                 {% endif %}
             </div>
             {% if filters.query or filters.media_type != 'all' or filters.genre != 'all' or filters.min_rating != '0' or filters.year != 'all' %}
@@ -75,6 +77,9 @@
             {% endif %}
         </div>
 
+        {% if g.cache_info and g.cache_info.status == 'stale' %}
+            <div class="api-error" role="status">The movie service is unavailable or refreshing. Showing saved results from {{ g.cache_info.fetched_at }}.</div>
+        {% endif %}
         {% if api_error %}
             <div class="api-error" role="alert">
                 <strong>We couldn't reach the movie catalog.</strong>

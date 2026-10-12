@@ -11,50 +11,27 @@ from flask import (
     url_for,
 )
 
-from services.api_service import RapidApiService
-from services.imdb_service import ImdbService
+from services.integrations import BoxOffice, MovieSearch, RandomMovie, configured
 from services.search_service import SearchService
 from services.streaming_service import StreamingAvailabilityService
+from services.validation import search_filters, text
 
 
 def register_routes(app):
     media_catalog = SearchService(app.config["DATA_DIR"])
+    box_office = BoxOffice()
 
     def rapid_api_is_configured():
-        return all(
-            current_app.config.get(name)
-            for name in ("RAPIDAPI_KEY", "RAPIDAPI_HOST", "RAPIDAPI_BASE_URL")
-        )
+        return configured("RAPIDAPI")
 
     def streaming_service():
-        api_client = RapidApiService(
-            base_url=current_app.config["RAPIDAPI_BASE_URL"],
-            api_key=current_app.config["RAPIDAPI_KEY"],
-            host=current_app.config["RAPIDAPI_HOST"],
-        )
-        return StreamingAvailabilityService(
-            api_client=api_client,
-            search_path=current_app.config["RAPIDAPI_SEARCH_PATH"],
-            query_parameter=current_app.config["RAPIDAPI_QUERY_PARAMETER"],
-            country=current_app.config["RAPIDAPI_COUNTRY"],
-        )
+        return MovieSearch()
 
     def imdb_api_is_configured():
-        return all(
-            current_app.config.get(name)
-            for name in ("IMDB_API_KEY", "IMDB_API_HOST", "IMDB_API_BASE_URL")
-        )
+        return configured("IMDB_API")
 
     def imdb_service():
-        api_client = RapidApiService(
-            base_url=current_app.config["IMDB_API_BASE_URL"],
-            api_key=current_app.config["IMDB_API_KEY"],
-            host=current_app.config["IMDB_API_HOST"],
-        )
-        return ImdbService(
-            api_client=api_client,
-            random_path=current_app.config["IMDB_RANDOM_PATH"],
-        )
+        return RandomMovie()
 
     @app.route("/")
     def index():
@@ -63,13 +40,7 @@ def register_routes(app):
 
     @app.route("/explore")
     def explore():
-        filters = {
-            "query": request.args.get("q", ""),
-            "media_type": request.args.get("type", "all"),
-            "genre": request.args.get("genre", "all"),
-            "min_rating": request.args.get("rating", "0"),
-            "year": request.args.get("year", "all"),
-        }
+        filters = search_filters(request.args)
 
         if request.args.get("action") == "surprise":
             if not imdb_api_is_configured():
@@ -81,15 +52,15 @@ def register_routes(app):
                     genre=filters["genre"],
                 )
             except requests.HTTPError as error:
-                current_app.logger.exception("IMDb random-title request failed")
+                current_app.logger.warning("IMDb random-title request failed")
                 if error.response is not None and error.response.status_code == 403:
-                    message = "Subscribe to the IMDb236 API in RapidAPI before using Surprise me."
+                    message = "Surprise me is temporarily unavailable. The application owner needs to check the movie service subscription."
                 else:
                     message = "IMDb couldn't choose a title right now. Please try again."
                 flash(message, "error")
                 return redirect(url_for("explore"))
             except (requests.RequestException, ValueError):
-                current_app.logger.exception("IMDb random-title request failed")
+                current_app.logger.warning("IMDb random-title request failed")
                 flash("IMDb couldn't choose a title right now. Please try again.", "error")
                 return redirect(url_for("explore"))
 
@@ -104,6 +75,8 @@ def register_routes(app):
 
         if using_external_api:
             try:
+                if len(filters["query"]) > 200:
+                    raise ValueError("Search is too long.")
                 titles = streaming_service().search(
                     filters["query"],
                     media_type=filters["media_type"],
@@ -118,7 +91,7 @@ def register_routes(app):
                 titles = []
                 api_error = "The movie service timed out. Please try your search again."
             except (requests.RequestException, ValueError):
-                current_app.logger.exception("Streaming Availability search failed")
+                current_app.logger.warning("Streaming Availability search failed")
                 titles = []
                 api_error = "Live movie search is temporarily unavailable. Please try again."
         else:
@@ -166,13 +139,7 @@ def register_routes(app):
     @app.route("/api/media")
     def media_api():
         """JSON endpoint that uses the same filters as the Explore page."""
-        titles = media_catalog.search(
-            query=request.args.get("q", ""),
-            media_type=request.args.get("type", "all"),
-            genre=request.args.get("genre", "all"),
-            min_rating=request.args.get("rating", "0"),
-            year=request.args.get("year", "all"),
-        )
+        titles = media_catalog.search(**search_filters(request.args))
         return jsonify({"count": len(titles), "results": titles})
 
     @app.get("/api/rapid/search")
@@ -190,34 +157,22 @@ def register_routes(app):
                 "missing": missing,
             }), 503
 
-        query = request.args.get("q", "").strip()
+        filters = search_filters(request.args)
+        query = filters["query"]
         if not query:
             return jsonify({"error": "Add a non-empty q query parameter."}), 400
 
-        service = RapidApiService(
-            base_url=current_app.config["RAPIDAPI_BASE_URL"],
-            api_key=current_app.config["RAPIDAPI_KEY"],
-            host=current_app.config["RAPIDAPI_HOST"],
-        )
-        params = {
-            current_app.config["RAPIDAPI_QUERY_PARAMETER"]: query,
-        }
-        if "country=" not in current_app.config["RAPIDAPI_SEARCH_PATH"]:
-            params["country"] = current_app.config["RAPIDAPI_COUNTRY"]
-        media_type = request.args.get("type", "all").lower()
-        show_type = {"movie": "movie", "show": "series"}.get(media_type)
-        if show_type:
-            params["show_type"] = show_type
-
+        if len(query) > 200:
+            return jsonify({"error": "Keep searches to 200 characters or fewer."}), 400
         try:
-            result = service.get(current_app.config["RAPIDAPI_SEARCH_PATH"], params=params)
+            result = streaming_service().search(query, filters["media_type"])
         except requests.Timeout:
             return jsonify({"error": "The external API timed out. Try again."}), 504
         except (requests.RequestException, ValueError):
-            current_app.logger.exception("RapidAPI request failed")
+            current_app.logger.warning("RapidAPI request failed")
             return jsonify({"error": "The external API request failed."}), 502
 
-        return jsonify(result)
+        return jsonify({"count": len(result), "results": result})
 
     @app.get("/api/imdb/random")
     def imdb_random_api():
@@ -230,15 +185,16 @@ def register_routes(app):
                 "missing": missing,
             }), 503
 
+        filters = search_filters(request.args)
         try:
             result = imdb_service().random(
-                media_type=request.args.get("type", "all"),
-                genre=request.args.get("genre", "all"),
+                media_type=filters["media_type"],
+                genre=filters["genre"],
             )
         except requests.Timeout:
             return jsonify({"error": "The IMDb API timed out. Try again."}), 504
         except requests.HTTPError as error:
-            current_app.logger.exception("IMDb API request failed")
+            current_app.logger.warning("IMDb API request failed")
             upstream_status = error.response.status_code if error.response is not None else None
             message = "The IMDb API rejected the request."
             if upstream_status == 403:
@@ -248,7 +204,26 @@ def register_routes(app):
                 "upstream_status": upstream_status,
             }), 502
         except (requests.RequestException, ValueError):
-            current_app.logger.exception("IMDb API request failed")
+            current_app.logger.warning("IMDb API request failed")
             return jsonify({"error": "The IMDb API request failed."}), 502
 
         return jsonify(result)
+
+    @app.get("/box-office")
+    @app.get("/api/box-office")
+    def box_office_page():
+        query = text(request.args.get("q", ""), "q", 200)
+        error = None
+        status = 200
+        payload = {"results": [], "count": 0, "source_url": box_office.SOURCE_URL}
+        try:
+            if len(query) > 200:
+                raise ValueError("Search is too long.")
+            payload = box_office.search(query)
+        except requests.Timeout:
+            error, status = "The box office source timed out. Please try again.", 504
+        except (requests.RequestException, ValueError):
+            error, status = "Box office data is unavailable. Please try again later.", 502
+        if request.path.startswith("/api/"):
+            return jsonify({**payload, **({"error": error} if error else {})}), status
+        return render_template("box_office.html", data=payload, error=error, query=query), status

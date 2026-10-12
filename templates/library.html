@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Saved library — BetterBoxd{% endblock %}
+{% block content %}
+<section class="explore-hero"><div class="content-shell">
+<p class="eyebrow light">Your growing movie collection</p>
+<h1>Saved discoveries.</h1><p>Search previously retrieved movies without another external request.</p>
+</div></section>
+<section class="catalog-section"><div class="content-shell">
+<form class="filter-panel" method="get">
+<label class="search-field"><span>Search saved titles, descriptions, and tags</span><input type="search" name="q" value="{{ query }}" maxlength="200"></label>
+<button class="button button-primary" type="submit">Search library</button>
+</form>
+<p>{{ data.count }} saved records · Page {{ data.page }}</p>
+<div class="catalog-grid">{% for item in data.results %}
+<article class="catalog-card"><div class="catalog-copy">
+<p class="catalog-meta">{{ item.year or 'Unknown year' }} · {{ item.media_type }} · {{ item.source|replace('_', ' ') }}</p>
+<h2>{{ item.title }}</h2><p>{{ item.synopsis or 'No synopsis available.' }}</p>
+{% if item.tags %}<p>{{ item.tags|join(', ') }}</p>{% endif %}
+{% if item.notes %}<p>{{ item.notes }}</p>{% endif %}
+{% if item.source_url %}<p><a href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer">Source</a></p>{% endif %}
+<p><a href="{{ url_for('explore', q=item.title) }}">Find watch options</a> · <a href="{{ url_for('records.detail', record_id=item.id) }}">View saved details</a></p>
+</div></article>
+{% else %}<p>No saved records found. Search Explore or visit Box office to capture discoveries.</p>{% endfor %}</div>
+<nav aria-label="Library pages">
+{% if data.page > 1 %}<a href="{{ url_for('records.library', q=query, page=data.page-1, limit=data.limit) }}">Previous</a>{% endif %}
+{% if data.page * data.limit < data.count %}<a href="{{ url_for('records.library', q=query, page=data.page+1, limit=data.limit) }}">Next</a>{% endif %}
+</nav></div></section>
+{% endblock %}

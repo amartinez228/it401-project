@@ -28,6 +28,8 @@
             <nav class="site-nav" id="site-nav" aria-label="Main navigation">
                 <a class="{{ 'active' if request.endpoint == 'index' }}" href="{{ url_for('index') }}">Home</a>
                 <a class="{{ 'active' if request.endpoint == 'explore' }}" href="{{ url_for('explore') }}">Explore</a>
+                <a href="/box-office">Box office</a>
+                <a href="{{ url_for('records.library') }}">Saved library</a>
                 {% if session.get('user_name') %}
                     <span class="nav-greeting">Hi, {{ session['user_name'] }}</span>
                     <form method="post" action="{{ url_for('signout') }}">
