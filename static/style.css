@@ -2068,3 +2068,21 @@ button.nav-account {
 .box-office-table th, .box-office-table td { padding: 1rem; border-bottom: 1px solid #ddd; }
 .box-office-table caption { text-align: left; padding: 1rem 0; }
 .box-office-table a { text-decoration: underline; }
+
+/* A4 saved-record retrieval */
+.search-hero { padding-bottom: 72px; }
+.retrieval-form { grid-template-columns: minmax(240px, 2fr) repeat(3, minmax(130px, 1fr)) auto; }
+.search-help { margin: 22px 0 36px; color: #6f7379; }
+.search-result-list { display: grid; gap: 18px; }
+.search-result { display: flex; align-items: flex-start; padding: 12px 24px; }
+.search-result .catalog-copy { flex: 1; }
+.search-result h2 { margin: 8px 0 14px; }
+.search-result p { line-height: 1.7; }
+.search-rank { color: #b0afa9; padding-top: 30px; font-size: 28px; min-width: 50px; }
+.score-label { float: right; color: #5b7162; }
+.search-pagination { display: flex; align-items: center; justify-content: center; gap: 24px; padding: 36px 0; }
+.search-result .chip-row span { background: #edf2ed; padding: 5px 12px; border-radius: 30px; font-size: 12px; }
+@media (max-width: 800px) { .retrieval-form { grid-template-columns: 1fr 1fr; } .retrieval-form .search-field { grid-column: 1 / -1; } .search-result { padding: 8px; } .score-label { float: none; display: block; } }
+
+.search-result .catalog-copy { min-height: 0; }
+.search-result { min-height: 0; }

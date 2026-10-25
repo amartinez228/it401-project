@@ -46,10 +46,12 @@ def register_routes(app):
             if not imdb_api_is_configured():
                 flash("The IMDb surprise service is not configured yet.", "error")
                 return redirect(url_for("explore"))
+            surprise_type = "Movie" if filters["media_type"] == "all" else filters["media_type"]
             try:
                 surprise_title = imdb_service().random_title(
-                    media_type=filters["media_type"],
+                    media_type=surprise_type,
                     genre=filters["genre"],
+                    refresh=True,
                 )
             except requests.HTTPError as error:
                 current_app.logger.warning("IMDb random-title request failed")
@@ -66,8 +68,7 @@ def register_routes(app):
 
             flash(f"Your IMDb surprise pick is {surprise_title}.", "success")
             redirect_filters = {"q": surprise_title}
-            if filters["media_type"] != "all":
-                redirect_filters["type"] = filters["media_type"]
+            redirect_filters["type"] = surprise_type
             return redirect(url_for("explore", **redirect_filters))
 
         api_error = None

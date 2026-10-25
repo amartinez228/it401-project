@@ -5,6 +5,7 @@ from flask import Flask
 from config import BASE_DIR, config
 from routes.main import register_routes
 from routes.records import records
+from routes.search import search
 from routes.errors import register_errors
 from extensions import db, migrate
 import models  # Register tables with SQLAlchemy before migrations run.
@@ -32,6 +33,7 @@ def create_app(config_name=None, overrides=None):
     migrate.init_app(app, db)
     register_errors(app)
     app.register_blueprint(records)
+    app.register_blueprint(search)
     register_routes(app)
 
     return app

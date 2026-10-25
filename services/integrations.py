@@ -34,16 +34,16 @@ class MovieSearch:
 
 
 class RandomMovie:
-    def random(self, media_type="all", genre="all"):
+    def random(self, media_type="all", genre="all", *, refresh=False):
         config = current_app.config
         parameters = {"type": media_type.lower(), "genre": genre.casefold(),
                       "base": config["IMDB_API_BASE_URL"], "path": config["IMDB_RANDOM_PATH"]}
         return cached("imdb", parameters,
             lambda: ImdbService(api_client("IMDB_API"), config["IMDB_RANDOM_PATH"]).random(media_type, genre),
-            config["IMDB_CACHE_TTL_SECONDS"], "https://rapidapi.com/")
+            config["IMDB_CACHE_TTL_SECONDS"], "https://rapidapi.com/", refresh=refresh)
 
-    def random_title(self, media_type="all", genre="all"):
-        return self.random(media_type, genre)[0]["primaryTitle"]
+    def random_title(self, media_type="all", genre="all", *, refresh=False):
+        return self.random(media_type, genre, refresh=refresh)[0]["primaryTitle"]
 
 
 class BoxOffice:

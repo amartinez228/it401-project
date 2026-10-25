@@ -296,3 +296,81 @@ def test_ide_script_and_import_use_same_database_folder(monkeypatch, tmp_path):
         script_database = db.engine.url
     with imported.app_context():
         assert db.engine.url == script_database
+
+
+
+def test_new_cache_entry_survives_mysql_second_rounding(client, provider, monkeypatch):
+    """MySQL DATETIME(0) can round an initial deadline into the next second."""
+    from sqlalchemy import event
+
+    now = utcnow().replace(microsecond=900000)
+    monkeypatch.setattr('services.cache_service.utcnow', lambda: now)
+
+    def mysql_rounding(mapper, connection, target):
+        for name in ('expires_at', 'lease_until', 'retry_after'):
+            value = getattr(target, name)
+            setattr(target, name, (value + timedelta(microseconds=500000)).replace(microsecond=0))
+
+    event.listen(ResponseCache, 'before_insert', mysql_rounding)
+    try:
+        response = client.get('/api/rapid/search?q=Arrival')
+        assert response.status_code == 200
+        assert response.headers['X-Data-Cache'] == 'miss'
+        assert client.get('/api/rapid/search?q=Arrival').headers['X-Data-Cache'] == 'hit'
+        assert client.get('/api/records?q=Arrival').json['count'] == 1
+        assert provider.call_count == 1
+    finally:
+        event.remove(ResponseCache, 'before_insert', mysql_rounding)
+
+
+
+def test_surprise_clicks_refresh_without_growing_cache(client, provider, app):
+    client.application.config.update(IMDB_API_KEY='private-provider-key', IMDB_API_HOST='example.com',
+                                    IMDB_API_BASE_URL='https://example.com')
+    provider.return_value.json.side_effect = [
+        {'primaryTitle': 'First Movie'}, {'primaryTitle': 'Second Movie'}, {'primaryTitle': 'Third Movie'}]
+    # A cached API read must not pin the explicit Surprise me button to that pick.
+    assert client.get('/api/imdb/random?type=Movie').json[0]['primaryTitle'] == 'First Movie'
+    first = client.get('/explore?action=surprise')
+    second = client.get('/explore?action=surprise&type=Movie')
+    assert first.headers['Location'].endswith('/explore?q=Second+Movie&type=Movie')
+    assert second.headers['Location'].endswith('/explore?q=Third+Movie&type=Movie')
+    assert first.headers['X-Data-Cache'] == second.headers['X-Data-Cache'] == 'miss'
+    assert client.get('/api/imdb/random?type=Movie').json[0]['primaryTitle'] == 'Third Movie'
+    assert provider.call_count == 3
+    with app.app_context():
+        assert len(db.session.scalars(select(ResponseCache)).all()) == 1
+        assert len(db.session.scalars(select(Record)).all()) == 3
+
+
+def test_surprise_refresh_preserves_format_and_genre(client, provider):
+    client.application.config.update(IMDB_API_KEY='private-provider-key', IMDB_API_HOST='example.com',
+                                    IMDB_API_BASE_URL='https://example.com')
+    provider.return_value.json.return_value = {'primaryTitle': 'Example Show'}
+    response = client.get('/explore?action=surprise&type=Show&genre=Science+Fiction')
+    assert response.headers['Location'].endswith('/explore?q=Example+Show&type=Show')
+    assert provider.call_args.kwargs['params'] == {'type': 'tvSeries', 'genre': 'Sci-Fi'}
+
+
+@pytest.mark.parametrize('deadline', ['lease_until', 'retry_after'])
+def test_explicit_refresh_respects_lease_and_cooldown(app, deadline):
+    with app.test_request_context():
+        fetch = Mock(return_value=[])
+        cached('refresh-test', {}, fetch, 60, 'https://example.com')
+        entry = db.session.scalar(select(ResponseCache))
+        entry.payload = None
+        setattr(entry, deadline, utcnow() + timedelta(seconds=60))
+        db.session.commit()
+        with pytest.raises(CacheBusy):
+            cached('refresh-test', {}, fetch, 60, 'https://example.com', refresh=True)
+        assert fetch.call_count == 1
+
+
+def test_failed_explicit_refresh_retains_saved_pick_and_starts_cooldown(app):
+    with app.test_request_context():
+        fetch = Mock(return_value=[{'primaryTitle': 'Saved Movie'}])
+        original = cached('imdb', {}, fetch, 900, 'https://example.com')
+        fetch.side_effect = requests.Timeout()
+        assert cached('imdb', {}, fetch, 900, 'https://example.com', refresh=True) == original
+        assert cached('imdb', {}, fetch, 900, 'https://example.com', refresh=True) == original
+        assert fetch.call_count == 2

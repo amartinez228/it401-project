@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Search saved discoveries &middot; BetterBoxd{% endblock %}
+{% block content %}
+<section class="explore-hero search-hero"><div class="content-shell">
+<p class="eyebrow light">Your collection, connected</p><h1>Find your next<br><em>great story.</em></h1>
+<p>Search saved discoveries by title, synopsis, genre, tags, or notes. Explore the collection without another external request.</p>
+</div></section>
+<section class="catalog-section"><div class="content-shell">
+<form class="filter-panel retrieval-form" method="get" action="{{ url_for('search.index') }}">
+<label class="search-field"><span>Keyword or phrase</span><input type="search" name="q" value="{{ options.q }}" maxlength="200" placeholder="Try Arrival, space, or music" aria-describedby="search-help"></label>
+<label><span>Source</span><select name="source"><option value="all">All sources</option>{% for source in sources %}<option value="{{ source }}" {{ 'selected' if options.source == source }}>{{ source|replace('_',' ')|title }}</option>{% endfor %}</select></label>
+<label><span>Format</span><select name="type">{% for value, label in [('all','All formats'),('Movie','Movies'),('Show','Shows')] %}<option value="{{ value }}" {{ 'selected' if options.media_type == value }}>{{ label }}</option>{% endfor %}</select></label>
+<label><span>Sort by</span><select name="sort">{% for value,label in sorts.items() %}<option value="{{ value }}" {{ 'selected' if options.sort == value }}>{{ label }}</option>{% endfor %}</select></label>
+<button class="button button-primary" type="submit">Search</button>
+</form>
+<p id="search-help" class="search-help">All words must match. Title matches rank above synopsis matches. <a href="{{ url_for('search.index') }}">Start a new search</a> &middot; <a href="{{ url_for('search.index', q=options.q) }}">Remove filters</a></p>
+{% if message %}<div class="empty-state" role="alert"><h2>{{ message }}</h2><p>Adjust your search or try again later.</p></div>
+{% elif data is none %}<div class="empty-state"><h2>Enter a keyword to begin.</h2><p>Your saved movies and shows are waiting to be rediscovered.</p><a href="{{ url_for('explore') }}">Explore and save new discoveries</a></div>
+{% else %}
+<div class="results-heading" role="status"><div><p class="result-count">{{ data.count }} results found for &ldquo;{{ options.q }}&rdquo;</p><h2>{{ sorts[options.sort] }}</h2></div><p>{{ data.start }}&ndash;{{ data.end }} of {{ data.count }} &middot; Page {{ data.page }} of {{ data.pages }}</p></div>
+{% include 'search_results.html' %}
+{% if data.count %}<nav class="search-pagination" aria-label="Search result pages">{% if data.page > 1 %}<a class="button button-secondary" rel="prev" href="{{ page_url(data.page - 1) }}">Previous</a>{% endif %}<span>Page {{ data.page }} of {{ data.pages }}</span>{% if data.page < data.pages %}<a class="button button-primary" rel="next" href="{{ page_url(data.page + 1) }}">Next</a>{% endif %}</nav>{% endif %}
+{% endif %}
+</div></section>{% endblock %}

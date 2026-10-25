@@ -1,0 +1,92 @@
+{
+  "database": "Disposable SQLite; not live MySQL validation",
+  "queries": [
+    {
+      "query": "arrival",
+      "intent": "Find the film titled Arrival",
+      "expected": [
+        "Arrival"
+      ],
+      "actual": [
+        "Arrival",
+        "Arrival Stories",
+        "The Visitor"
+      ],
+      "false_positives": [
+        "Arrival Stories",
+        "The Visitor"
+      ],
+      "missed": [],
+      "first_useful_rank": 1,
+      "precision": 0.3333333333333333,
+      "recall": 1.0
+    },
+    {
+      "query": "alien communication",
+      "intent": "Find films about alien communication",
+      "expected": [
+        "Arrival"
+      ],
+      "actual": [
+        "Arrival"
+      ],
+      "false_positives": [],
+      "missed": [],
+      "first_useful_rank": 1,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    {
+      "query": "concert",
+      "intent": "Find concert stories",
+      "expected": [
+        "Music Room",
+        "Silent Stage"
+      ],
+      "actual": [
+        "Silent Stage",
+        "Music Room"
+      ],
+      "false_positives": [],
+      "missed": [],
+      "first_useful_rank": 1,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    {
+      "query": "music",
+      "intent": "Find stories about music or musicians",
+      "expected": [
+        "Music Room",
+        "Silent Stage"
+      ],
+      "actual": [
+        "Music Room",
+        "Silent Stage"
+      ],
+      "false_positives": [],
+      "missed": [],
+      "first_useful_rank": 1,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    {
+      "query": "musicians",
+      "intent": "Find stories about musicians",
+      "expected": [
+        "Music Room",
+        "Silent Stage"
+      ],
+      "actual": [
+        "Music Room"
+      ],
+      "false_positives": [],
+      "missed": [
+        "Silent Stage"
+      ],
+      "first_useful_rank": 1,
+      "precision": 1.0,
+      "recall": 0.5
+    }
+  ]
+}

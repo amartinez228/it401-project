@@ -55,3 +55,16 @@ class Record(db.Model):
                   "tags", "notes", "data", "retrieval_text", "content_hash", "schema_version", "curated")
         return {**{field: getattr(self, field) for field in fields},
                 **{field: iso(getattr(self, field)) for field in ("created_at", "updated_at", "fetched_at")}}
+
+
+class SearchEvent(db.Model):
+    """Anonymous retrieval telemetry; never stores identity or credentials."""
+    __tablename__ = "search_events"
+    id = db.Column(db.Integer, primary_key=True)
+    query = db.Column(db.String(200), nullable=False)
+    normalized_query = db.Column(db.String(200), nullable=False)
+    searched_at = db.Column(db.DateTime, nullable=False, default=utcnow, index=True)
+    result_count = db.Column(db.Integer, nullable=False)
+    filters = db.Column(db.JSON, nullable=False)
+    sort = db.Column(db.String(20), nullable=False)
+    page = db.Column(db.Integer, nullable=False)

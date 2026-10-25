@@ -26,6 +26,7 @@
             </button>
 
             <nav class="site-nav" id="site-nav" aria-label="Main navigation">
+                <a href="{{ url_for('search.index') }}">Search saved</a>
                 <a class="{{ 'active' if request.endpoint == 'index' }}" href="{{ url_for('index') }}">Home</a>
                 <a class="{{ 'active' if request.endpoint == 'explore' }}" href="{{ url_for('explore') }}">Explore</a>
                 <a href="/box-office">Box office</a>

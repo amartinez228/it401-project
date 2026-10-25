@@ -1,0 +1,9 @@
+<div class="search-result-list">
+{% for item in data.results %}<article class="catalog-card search-result"><div class="search-rank" aria-label="Result rank">{{ data.start + loop.index0 }}</div><div class="catalog-copy">
+<p class="catalog-meta">{{ item.media_type }} &middot; {{ item.year or 'Unknown year' }} &middot; {{ item.source|replace('_',' ')|title }} <span class="score-label">Relevance {{ item.score }}</span></p>
+<h2><a href="{{ url_for('search.detail', record_id=item.id) }}">{{ item.title }}</a></h2>
+<p>{{ (item.synopsis or 'No synopsis available.')|truncate(260) }}</p>
+<div class="chip-row">{% for genre in item.genres or [] %}<span>{{ genre }}</span>{% endfor %}</div>
+<p class="catalog-meta">Saved {{ item.created_at[:10] }} &middot; <a href="{{ url_for('search.detail', record_id=item.id) }}">View saved details &rarr;</a></p>
+</div></article>{% else %}<div class="empty-state"><h2>No matching records were found.</h2><p>Try a broader term or remove a filter.</p><a href="{{ url_for('search.index', q=options.q) }}">Remove filters</a></div>{% endfor %}
+</div>
