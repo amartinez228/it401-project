@@ -9,7 +9,7 @@ SQLAlchemy persistence, and ranked search over a saved movie library.
 
 **Course and assignment:** IT401, Assignment 4 - Searchable Information System
 
-**Branch:** `a4`, based on `origin/adrianmartinez-it401-a3`.
+**Branch:** `adrianmartinez-it401-a4`, based on `origin/adrianmartinez-it401-a3`.
 
 All visitors use the **application owner's RapidAPI account** through Flask.
 Visitors need neither a RapidAPI account nor a key. Credentials stay on the server.
@@ -21,7 +21,7 @@ Clone and create an environment first:
 ```powershell
 git clone https://github.com/amartinez228/it401-project.git
 cd it401-project
-git switch a4
+git switch adrianmartinez-it401-a4
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
